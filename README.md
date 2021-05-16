@@ -4,7 +4,7 @@
 
 **Enable the plugin:**
 
-1. Add X1Vita.skprx to taiHEN's config (ux0:/tai/config.txt):
+1. Add X1Vita.skprx to taiHEN's config (ux0:/tai/config.txt) or (ur0:/tai/config.txt):
 	```
 	*KERNEL
 	ux0:tai/X1Vita.skprx
@@ -21,3 +21,6 @@
 1. Just press the xbox button and it will connect to the Vita
 
 **Note**: If you use Mai, don't put the plugin inside ux0:/plugins because Mai will load all stuff you put in there...
+
+Made for the kyuhen homebrew contest.
+Based on ds4vita
