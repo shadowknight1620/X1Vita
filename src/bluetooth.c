@@ -12,7 +12,7 @@
 #define MICROSOFT_VID 0x45E
 #define XBOX_CONTROLLER_PID 0x2FD
 
-#define controller_ANALOG_THRESHOLD 70
+#define controller_ANALOG_THRESHOLD 20
 
 #define abs(x) (((x) < 0) ? -(x) : (x))
 
@@ -118,10 +118,6 @@ static void reset_input_emulation()
 	ksceCtrlSetAnalogEmulation(0, 0, 0x80, 0x80, 0x80, 0x80,
 		0x80, 0x80, 0x80, 0x80, 0);
 }
-
-
-
-
 
 static void enqueue_read_request(unsigned int mac0, unsigned int mac1,
 				 SceBtHidRequest *request, unsigned char *buffer,
@@ -359,18 +355,14 @@ static void patch_ctrl_data(SceCtrlData *pad_data)
 
 		//Joysticks
 		//Left Joystick X
-		leftX = (current_recieved_input[1] + current_recieved_input[2]) / 2;
-		if(abs(leftX - 128) < controller_ANALOG_THRESHOLD) leftX = 0x80;
+		if(abs(leftX - 128) < controller_ANALOG_THRESHOLD) leftX = (current_recieved_input[1] + current_recieved_input[2]) / 2;
 		//Left Joystick Y
-		leftY = (current_recieved_input[3] + current_recieved_input[4]) / 2;
-		if(abs(leftY - 128) < controller_ANALOG_THRESHOLD) leftY = 0x80;
+		if(abs(leftY - 128) < controller_ANALOG_THRESHOLD) leftY = (current_recieved_input[3] + current_recieved_input[4]) / 2;
 
 		//Right Joystick X
-		rightX = (current_recieved_input[5] + current_recieved_input[6]) / 2;
-		if(abs(rightX - 128) < controller_ANALOG_THRESHOLD) rightX = 0x80;
+		if(abs(rightX - 128) > controller_ANALOG_THRESHOLD) rightX = (current_recieved_input[5] + current_recieved_input[6]) / 2;
 		//Right Joystick Y
-		rightY = (current_recieved_input[7] + current_recieved_input[8]) / 2;
-		if(abs(rightY - 128) < controller_ANALOG_THRESHOLD) rightY = 0x80;
+		if(abs(rightY - 128) > controller_ANALOG_THRESHOLD) rightY = (current_recieved_input[7] + current_recieved_input[8]) / 2;
 
 		if(leftX != 128 && leftY != 128)
 			joyStickMoved = 1;
