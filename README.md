@@ -4,7 +4,7 @@
 
 **Enable the plugin:**
 
-1. Add X1Vita.skprx to taiHEN's config (ux0:/tai/config.txt):
+1. Add X1Vita.skprx to taiHEN's config (ux0:/tai/config.txt) or (ur0:/tai/config.txt):
 	```
 	*KERNEL
 	ux0:tai/X1Vita.skprx
