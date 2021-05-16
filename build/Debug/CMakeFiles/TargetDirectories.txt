@@ -1,4 +1,0 @@
-/home/ibrahim/GitRepos/X1Vita/build/Debug/CMakeFiles/edit_cache.dir
-/home/ibrahim/GitRepos/X1Vita/build/Debug/CMakeFiles/rebuild_cache.dir
-/home/ibrahim/GitRepos/X1Vita/build/Debug/CMakeFiles/X1Vita.skprx.dir
-/home/ibrahim/GitRepos/X1Vita/build/Debug/CMakeFiles/X1Vita.dir

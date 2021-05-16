@@ -1,7 +1,0 @@
-[
-{
-  "directory": "/home/ibrahim/GitRepos/X1Vita/build/Debug",
-  "command": "/usr/local/vitasdk/bin/arm-vita-eabi-gcc    -Wl,-q -Wl,-q -Wall -Wno-unknown-pragmas -O3 -O0 -g -DDEBUG -D_DEBUG -D__VITA_KERNEL__ -o CMakeFiles/X1Vita.dir/src/bluetooth.c.obj -c /home/ibrahim/GitRepos/X1Vita/src/bluetooth.c",
-  "file": "/home/ibrahim/GitRepos/X1Vita/src/bluetooth.c"
-}
-]
