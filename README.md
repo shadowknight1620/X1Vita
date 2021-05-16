@@ -21,3 +21,5 @@
 1. Just press the xbox button and it will connect to the Vita
 
 **Note**: If you use Mai, don't put the plugin inside ux0:/plugins because Mai will load all stuff you put in there...
+
+Made for the kyuhen homebrew contest.
