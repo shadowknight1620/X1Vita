@@ -1,0 +1,68 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.6.3"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "X1Vita",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "X1Vita::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-X1Vita-Debug-45b98da3e28f99747ce9.json",
+					"name" : "X1Vita",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "X1Vita.skprx::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-X1Vita.skprx-Debug-e3e3d7c41f39cfe96be6.json",
+					"name" : "X1Vita.skprx",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/ibrahim/GitRepos/X1Vita/build/Debug",
+		"source" : "/home/ibrahim/GitRepos/X1Vita"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 2
+	}
+}
