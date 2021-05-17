@@ -12,7 +12,7 @@
 #define MICROSOFT_VID 0x45E
 #define XBOX_CONTROLLER_PID 0x2FD
 
-#define controller_ANALOG_THRESHOLD 20
+#define controller_ANALOG_THRESHOLD 3
 
 #define abs(x) (((x) < 0) ? -(x) : (x))
 
@@ -24,6 +24,10 @@ static int bt_thread_run = 1;
 static int controller_connected = 0;
 static unsigned int controller_mac0 = 0;
 static unsigned int controller_mac1 = 0;
+
+static SceBtHidRequest hid_request;
+static unsigned char recv_buff[0x100];
+static SceBtEvent hid_event;
 
 static char current_recieved_input[0x12];
 
@@ -39,7 +43,7 @@ static inline void controller_input_reset(void)
 
 static int is_controller(const unsigned short vid_pid[2])
 {
-
+	ksceDebugPrintf("Got VID 0x%x        got PID 0x%x         ", vid_pid[0], vid_pid[1]);
 	//return (vid_pid[0] == controller_VID) &&
 	//	((vid_pid[1] == controller_PID) || (vid_pid[1] == controller_2_PID));
 	return (vid_pid[0] == MICROSOFT_VID) &&
@@ -56,8 +60,7 @@ static inline void mempool_free(void *ptr)
 	ksceKernelFreeHeapMemory(bt_mempool_uid, ptr);
 }
 
-static int controller_send_report(unsigned int mac0, unsigned int mac1, uint8_t flags, uint8_t report,
-			    size_t len, const void *data)
+static int controller_send_report(unsigned int mac0, unsigned int mac1, uint8_t flags, uint8_t report, size_t len, const void *data)
 {
 	SceBtHidRequest *req;
 	unsigned char *buf;
@@ -119,9 +122,7 @@ static void reset_input_emulation()
 		0x80, 0x80, 0x80, 0x80, 0);
 }
 
-static void enqueue_read_request(unsigned int mac0, unsigned int mac1,
-				 SceBtHidRequest *request, unsigned char *buffer,
-				 unsigned int length)
+static void enqueue_read_request(unsigned int mac0, unsigned int mac1, SceBtHidRequest *request, unsigned char *buffer, unsigned int length)
 {
 	memset(request, 0, sizeof(*request));
 	memset(buffer, 0, length);
@@ -159,12 +160,9 @@ DECL_FUNC_HOOK(SceBt_sub_22999C8, void *dev_base_ptr, int r1)
 
 static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common)
 {
-	static SceBtHidRequest hid_request;
-	static unsigned char recv_buff[0x100];
 
 	while (1) {
 		int ret;
-		SceBtEvent hid_event;
 
 		memset(&hid_event, 0, sizeof(hid_event));
 
@@ -185,6 +183,11 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 		}
 
 		switch (hid_event.id) {
+		case 0x15: //Bluetooth turned on or off
+		{
+			controller_connected = 0;
+			reset_input_emulation();
+		}
 		case 0x01: { /* Inquiry result event */
 			unsigned short vid_pid[2];
 			ksceBtGetVidPid(hid_event.mac0, hid_event.mac1, vid_pid);
@@ -213,6 +216,7 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 			ksceBtGetVidPid(hid_event.mac0, hid_event.mac1, vid_pid);
 
 			if (is_controller(vid_pid)) {
+
 				controller_input_reset();
 				controller_mac0 = hid_event.mac0;
 				controller_mac1 = hid_event.mac1;
@@ -287,7 +291,7 @@ static void patch_ctrl_data(SceCtrlData *pad_data)
 	int rightY = 0x80;
 	int joyStickMoved = 0;
 	unsigned int buttons = 0;
-
+	enqueue_read_request(hid_event.mac0, hid_event.mac1, &hid_request, recv_buff, sizeof(recv_buff));
 	//Xbox button
 	if(current_recieved_input[0] & 0x02) 
 	{
@@ -300,11 +304,37 @@ static void patch_ctrl_data(SceCtrlData *pad_data)
 	else if(current_recieved_input[0] & 0x1)
 	{
 		//DPad
-		if(current_recieved_input[13] == 0x7) buttons |= SCE_CTRL_LEFT;
-		if(current_recieved_input[13] == 0x5) buttons |= SCE_CTRL_DOWN;
-		if(current_recieved_input[13] == 0x3) buttons |= SCE_CTRL_RIGHT;
-		if(current_recieved_input[13] == 0x1) buttons |= SCE_CTRL_UP;
-
+		switch (current_recieved_input[13])
+		{
+			case 0x1:
+				buttons |= SCE_CTRL_UP;
+				break;
+			case 0x2:
+				buttons |= SCE_CTRL_UP;
+				buttons |= SCE_CTRL_RIGHT;
+				break;
+			case 0x3:
+				buttons |= SCE_CTRL_RIGHT;
+				break;
+			case 0x4:
+				buttons |= SCE_CTRL_RIGHT;
+				buttons |= SCE_CTRL_DOWN;
+				break;
+			case 0x5:
+				buttons |= SCE_CTRL_DOWN;
+				break;
+			case 0x6:
+				buttons |= SCE_CTRL_DOWN;
+				buttons |= SCE_CTRL_LEFT;
+				break;
+			case 0x7:
+				buttons |= SCE_CTRL_LEFT;
+				break;
+			case 0x8:
+				buttons |= SCE_CTRL_LEFT;
+				buttons |= SCE_CTRL_UP;
+				break;
+		}
 
 		//RB LB and ABXY. For some reason the buttons aren't or'ed together when pushed separetly which is why we need to do it like this.
 		switch (current_recieved_input[14])
@@ -355,28 +385,27 @@ static void patch_ctrl_data(SceCtrlData *pad_data)
 
 		//Joysticks
 		//Left Joystick X
-		if(abs(leftX - 128) < controller_ANALOG_THRESHOLD) leftX = (current_recieved_input[1] + current_recieved_input[2]) / 2;
+		leftX = (current_recieved_input[2]);
 		//Left Joystick Y
-		if(abs(leftY - 128) < controller_ANALOG_THRESHOLD) leftY = (current_recieved_input[3] + current_recieved_input[4]) / 2;
+		leftY = (current_recieved_input[4]);
 
 		//Right Joystick X
-		if(abs(rightX - 128) > controller_ANALOG_THRESHOLD) rightX = (current_recieved_input[5] + current_recieved_input[6]) / 2;
+		rightX = (current_recieved_input[6]);
 		//Right Joystick Y
-		if(abs(rightY - 128) > controller_ANALOG_THRESHOLD) rightY = (current_recieved_input[7] + current_recieved_input[8]) / 2;
+		rightY = (current_recieved_input[8]);
 
 		if(leftX != 128 && leftY != 128)
 			joyStickMoved = 1;
 
-		//LT RT
-		pad_data->lt = current_recieved_input[11];
-		pad_data->rt = current_recieved_input[13];
 	}
-
+	//LT RT
+	pad_data->lt = current_recieved_input[11];
+	pad_data->rt = current_recieved_input[13];
+	//Joysticks
 	pad_data->ry = rightY;
 	pad_data->rx = rightX;
 	pad_data->lx = leftX;
 	pad_data->ly = leftY;
-	
 	
 	pad_data->buttons |= buttons;
 	if(buttons != 0 || joyStickMoved) ksceKernelPowerTick(0);
