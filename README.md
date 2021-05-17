@@ -22,5 +22,7 @@
 
 **Note**: If you use Mai, don't put the plugin inside ux0:/plugins because Mai will load all stuff you put in there...
 
+This plugin is **not** compatible with the other ds vita plugins yet!!!!
+
 Made for the kyuhen homebrew contest.
 Based on ds4vita
