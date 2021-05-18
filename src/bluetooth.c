@@ -434,18 +434,18 @@ static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 	}
 
 	//LT RT
-	if(current_recieved_input[11] > 10)
+	if(current_recieved_input[9] > 10)
 	{
 		if(triggers) buttons |= SCE_CTRL_LTRIGGER;
 		else buttons |= SCE_CTRL_L1;
 	}
-	if(current_recieved_input[13] > 10)
+	if(current_recieved_input[11] > 10)
 	{
 		if(triggers) buttons |= SCE_CTRL_RTRIGGER;
 		else buttons |= SCE_CTRL_R1;
 	}
-	pad_data->lt = current_recieved_input[11];
-	pad_data->rt = current_recieved_input[13];
+	pad_data->lt = current_recieved_input[9];
+	pad_data->rt = current_recieved_input[11];
 	//Joysticks
 	pad_data->ry = rightY;
 	pad_data->rx = rightX;
