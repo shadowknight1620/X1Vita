@@ -20,6 +20,8 @@
 **Using it once paired (see above):**
 1. Just press the xbox button and it will connect to the Vita
 
+**Note**: If you are using multiple controllers and one controller is already connected you need to disable and reenable bluetooth for any other controller to pair and work.
+
 **Note**: If you use Mai, don't put the plugin inside ux0:/plugins because Mai will load all stuff you put in there...
 
 This plugin is **not** compatible with the other ds vita plugins yet!!!!
