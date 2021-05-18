@@ -25,9 +25,6 @@ static int controller_connected = 0;
 static unsigned int controller_mac0 = 0;
 static unsigned int controller_mac1 = 0;
 
-static SceBtHidRequest hid_request;
-static unsigned char recv_buff[0x100];
-static SceBtEvent hid_event;
 
 static char current_recieved_input[0x12];
 
@@ -161,8 +158,11 @@ DECL_FUNC_HOOK(SceBt_sub_22999C8, void *dev_base_ptr, int r1)
 static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common)
 {
 
+	static SceBtHidRequest hid_request;
+	static unsigned char recv_buff[0x100];
 	while (1) {
 		int ret;
+		SceBtEvent hid_event;
 
 		memset(&hid_event, 0, sizeof(hid_event));
 
@@ -181,6 +181,11 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 			if (hid_event.mac0 != controller_mac0 || hid_event.mac1 != controller_mac1)
 				continue;
 		}
+
+		ksceDebugPrintf("->Event:");
+		for (int i = 0; i < 0x15; i++)
+			ksceDebugPrintf(" %02X", recv_buff[i]);
+		ksceDebugPrintf("\n");
 
 		switch (hid_event.id) {
 		case 0x15: //Bluetooth turned on or off
@@ -283,7 +288,7 @@ static int controllervita_bt_thread(SceSize args, void *argp)
 }
 
 
-static void patch_ctrl_data(SceCtrlData *pad_data)
+static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 {
 	int leftX = 0x80;
 	int leftY = 0x80;
@@ -291,14 +296,13 @@ static void patch_ctrl_data(SceCtrlData *pad_data)
 	int rightY = 0x80;
 	int joyStickMoved = 0;
 	unsigned int buttons = 0;
-	enqueue_read_request(hid_event.mac0, hid_event.mac1, &hid_request, recv_buff, sizeof(recv_buff));
 	//Xbox button
 	if(current_recieved_input[0] & 0x02) 
 	{
 		if(current_recieved_input[1] & 0x01)
 		{
 			buttons |= SCE_CTRL_PSBUTTON;
-			ksceCtrlSetButtonEmulation(0, 0, 0, SCE_CTRL_INTERCEPTED, 16);
+			ksceCtrlSetButtonEmulation(0, 0, 0, SCE_CTRL_PSBUTTON, 8);
 		}
 	} //Ant other button call
 	else if(current_recieved_input[0] & 0x1)
@@ -352,12 +356,14 @@ static void patch_ctrl_data(SceCtrlData *pad_data)
 				buttons |= SCE_CTRL_TRIANGLE;
 				break;
 			case 0x80:
-				buttons |= SCE_CTRL_RTRIGGER;
-				buttons |= SCE_CTRL_R1;
+				//RB
+				if(triggers) buttons |= SCE_CTRL_R1;
+				else buttons |= SCE_CTRL_RTRIGGER;
 				break;
 			case 0x40:
-				buttons |= SCE_CTRL_LTRIGGER;
-				buttons |= SCE_CTRL_L1;
+				//LB
+				if(triggers) buttons |= SCE_CTRL_L1;
+				else buttons |= SCE_CTRL_LTRIGGER;
 				break;
 			default:
 				{
@@ -367,21 +373,49 @@ static void patch_ctrl_data(SceCtrlData *pad_data)
 					if(current_recieved_input[14] & 0x10) buttons |= SCE_CTRL_TRIANGLE;		
 					if(current_recieved_input[14] & 0x80)
 					{
-						buttons |= SCE_CTRL_RTRIGGER;
-						buttons |= SCE_CTRL_R1;
+						if(triggers) buttons |= SCE_CTRL_R1;
+						else buttons |= SCE_CTRL_RTRIGGER;
 					}
 					if(current_recieved_input[14] & 0x40) 
 					{
-						buttons |= SCE_CTRL_LTRIGGER;
-						buttons |= SCE_CTRL_L1;	
+						if(triggers) buttons |= SCE_CTRL_L1;
+						else buttons |= SCE_CTRL_LTRIGGER;
 					}
 					break;
 				}
 		}
 
-		//Select and Start
-		if(current_recieved_input[15] == 0x8) buttons |= SCE_CTRL_START;
+		//Select
+		//if(current_recieved_input[15] == 0x8) buttons |= SCE_CTRL_START;
 		if(current_recieved_input[16] == 0x1) buttons |= SCE_CTRL_SELECT;
+
+		//R3 L3 Start
+		switch (current_recieved_input[15])
+		{
+			case 0x8:
+				buttons |= SCE_CTRL_START;
+				break;
+			case 0x40:
+				buttons |= SCE_CTRL_R3;
+				break;
+			case 0x20:
+				buttons |= SCE_CTRL_L3;
+
+			default:
+				if(current_recieved_input[15] & 0x8) 
+				{
+					buttons |= SCE_CTRL_START;
+				}
+				if(current_recieved_input[15] & 0x40) 
+				{
+					buttons |= SCE_CTRL_R3;
+				}
+				if(current_recieved_input[15] & 0x20) 
+				{
+					buttons |= SCE_CTRL_L3;
+				}
+				break;
+		}
 
 		//Joysticks
 		//Left Joystick X
@@ -398,7 +432,18 @@ static void patch_ctrl_data(SceCtrlData *pad_data)
 			joyStickMoved = 1;
 
 	}
+
 	//LT RT
+	if(current_recieved_input[11] > 10)
+	{
+		if(triggers) buttons |= SCE_CTRL_LTRIGGER;
+		else buttons |= SCE_CTRL_L1;
+	}
+	if(current_recieved_input[13] > 10)
+	{
+		if(triggers) buttons |= SCE_CTRL_RTRIGGER;
+		else buttons |= SCE_CTRL_R1;
+	}
 	pad_data->lt = current_recieved_input[11];
 	pad_data->rt = current_recieved_input[13];
 	//Joysticks
@@ -411,7 +456,7 @@ static void patch_ctrl_data(SceCtrlData *pad_data)
 	if(buttons != 0 || joyStickMoved) ksceKernelPowerTick(0);
 }
 
-static void patch_ctrl_data_all_user(int port, SceCtrlData *pad_data, int count)
+static void patch_ctrl_data_all_user(int port, SceCtrlData *pad_data, int count, int triggers)
 {
 	unsigned int i;
 
@@ -419,43 +464,43 @@ static void patch_ctrl_data_all_user(int port, SceCtrlData *pad_data, int count)
 		SceCtrlData k_data;
 
 		ksceKernelMemcpyUserToKernel(&k_data, (uintptr_t)pad_data, sizeof(k_data));
-		patch_ctrl_data(&k_data);
+		patch_ctrl_data(&k_data, triggers);
 		ksceKernelMemcpyKernelToUser((uintptr_t)pad_data, &k_data, sizeof(k_data));
 
 		pad_data++;
 	}
 }
 
-static void patch_ctrl_data_all_kernel( int port, SceCtrlData *pad_data, int count)
+static void patch_ctrl_data_all_kernel( int port, SceCtrlData *pad_data, int count, int triggers)
 {
 	unsigned int i;
 
 	for (i = 0; i < count; i++, pad_data++)
-		patch_ctrl_data(pad_data);
+		patch_ctrl_data(pad_data, triggers);
 }
 
-#define DECL_FUNC_HOOK_PATCH_CTRL(type, name) \
+#define DECL_FUNC_HOOK_PATCH_CTRL(type, name, triggers) \
 	DECL_FUNC_HOOK(SceCtrl_##name, int port, SceCtrlData *pad_data, int count) \
 	{ \
-		int ret = TAI_CONTINUE(int, SceCtrl_ ##name##_ref, port, pad_data, count); \
+		int ret = TAI_CONTINUE(int, SceCtrl_ ##name##_ref, port, pad_data, count, triggers); \
 		if (ret >= 0 && controller_connected) \
-			patch_ctrl_data_all_##type(port, pad_data, count); \
+			patch_ctrl_data_all_##type(port, pad_data, count, triggers); \
 		return ret; \
 	}
 
 	
-DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlPeekBufferNegative)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferNegative2)
-DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlPeekBufferPositive)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferPositive2)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferPositiveExt)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferPositiveExt2)
-DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlReadBufferNegative)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferNegative2)
-DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlReadBufferPositive)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferPositive2)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferPositiveExt)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferPositiveExt2)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlPeekBufferNegative, 0)
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferNegative2, 1)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlPeekBufferPositive, 0)
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferPositive2, 1)
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferPositiveExt, 0)
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferPositiveExt2, 1)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlReadBufferNegative, 0)
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferNegative2, 1)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlReadBufferPositive, 0)
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferPositive2, 1)
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferPositiveExt, 0)
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferPositiveExt2, 1)
 
 void _start() __attribute__ ((weak, alias ("module_start")));
 #pragma region Definitions
