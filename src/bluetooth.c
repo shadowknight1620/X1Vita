@@ -489,18 +489,30 @@ static void patch_ctrl_data_all_kernel( int port, SceCtrlData *pad_data, int cou
 	}
 
 	
-DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlPeekBufferNegative, 0)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferNegative2, 1)
 DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlPeekBufferPositive, 0)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferPositive2, 1)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferPositiveExt, 0)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferPositiveExt2, 1)
-DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlReadBufferNegative, 0)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferNegative2, 1)
 DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlReadBufferPositive, 0)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlPeekBufferNegative, 0)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlReadBufferNegative, 0)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlPeekBufferPositiveExt, 0)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlReadBufferPositiveExt, 0)
+
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlPeekBufferPositive2, 1)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlReadBufferPositive2, 1)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlPeekBufferNegative2, 1)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlReadBufferNegative2, 1)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlPeekBufferPositiveExt2, 1)
+DECL_FUNC_HOOK_PATCH_CTRL(kernel, ksceCtrlReadBufferPositiveExt2, 1)
+
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferNegative2, 1)
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferPositive2, 1)
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferNegative2, 1)
 DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferPositive2, 1)
-DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferPositiveExt, 0)
+
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferPositiveExt2, 1)
 DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferPositiveExt2, 1)
+
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlPeekBufferPositiveExt, 0)
+DECL_FUNC_HOOK_PATCH_CTRL(user, sceCtrlReadBufferPositiveExt, 0)
 
 void _start() __attribute__ ((weak, alias ("module_start")));
 #pragma region Definitions
@@ -522,17 +534,39 @@ int module_start(SceSize argc, const void *args)
 	if (ret < 0) {
 		goto error_find_scebt;
 	}
+
+	tai_module_info_t SceCtrl_modinfo;
+	SceCtrl_modinfo.size = sizeof(SceCtrl_modinfo);
+
+	if (taiGetModuleInfoForKernel(KERNEL_PID, "SceCtrl", &SceCtrl_modinfo) < 0) {
+		ksceDebugPrintf("Error finding SceBt module\n");
+		return SCE_KERNEL_START_FAILED;
+	}
+
+
+	BIND_FUNC_EXPORT_HOOK(SceCtrl_ksceCtrlPeekBufferPositive, KERNEL_PID, "SceCtrl", TAI_ANY_LIBRARY, 0xEA1D3A34);
+    BIND_FUNC_EXPORT_HOOK(SceCtrl_ksceCtrlReadBufferPositive, KERNEL_PID, "SceCtrl", TAI_ANY_LIBRARY, 0x9B96A1AA);
+    BIND_FUNC_EXPORT_HOOK(SceCtrl_ksceCtrlPeekBufferNegative, KERNEL_PID, "SceCtrl", TAI_ANY_LIBRARY, 0x19895843);
+    BIND_FUNC_EXPORT_HOOK(SceCtrl_ksceCtrlReadBufferNegative, KERNEL_PID, "SceCtrl", TAI_ANY_LIBRARY, 0x8D4E0DD1);
+
+	BIND_FUNC_OFFSET_HOOK(SceCtrl_ksceCtrlPeekBufferPositiveExt, KERNEL_PID, SceCtrl_modinfo.modid, 0, 0x3928, 1);
+    BIND_FUNC_OFFSET_HOOK(SceCtrl_ksceCtrlReadBufferPositiveExt, KERNEL_PID, SceCtrl_modinfo.modid, 0, 0x3BCC, 1);
+
+    BIND_FUNC_OFFSET_HOOK(SceCtrl_ksceCtrlPeekBufferPositive2, KERNEL_PID, SceCtrl_modinfo.modid, 0, 0x3EF8, 1);
+    BIND_FUNC_OFFSET_HOOK(SceCtrl_ksceCtrlReadBufferPositive2, KERNEL_PID, SceCtrl_modinfo.modid, 0, 0x449C, 1);
+    BIND_FUNC_OFFSET_HOOK(SceCtrl_ksceCtrlPeekBufferNegative2, KERNEL_PID, SceCtrl_modinfo.modid, 0, 0x41C8, 1);
+    BIND_FUNC_OFFSET_HOOK(SceCtrl_ksceCtrlReadBufferNegative2, KERNEL_PID, SceCtrl_modinfo.modid, 0, 0x47F0, 1);
+    BIND_FUNC_OFFSET_HOOK(SceCtrl_ksceCtrlPeekBufferPositiveExt2, KERNEL_PID, SceCtrl_modinfo.modid, 0, 0x4B48, 1);
+    BIND_FUNC_OFFSET_HOOK(SceCtrl_ksceCtrlReadBufferPositiveExt2, KERNEL_PID, SceCtrl_modinfo.modid, 0, 0x4E14, 1);
+
 	/* SceBt hooks */
 	BIND_FUNC_OFFSET_HOOK(SceBt_sub_22999C8, KERNEL_PID,
 		SceBt_modinfo.modid, 0, 0x22999C8 - 0x2280000, 1);
-	BIND_FUNC_EXPORT_HOOK(SceCtrl_ksceCtrlPeekBufferNegative, KERNEL_PID,
-		"SceCtrl", TAI_ANY_LIBRARY, 0x19895843);
+
 
 	BIND_FUNC_EXPORT_HOOK(SceCtrl_sceCtrlPeekBufferNegative2, KERNEL_PID,
 		"SceCtrl", TAI_ANY_LIBRARY, 0x81A89660);
 
-	BIND_FUNC_EXPORT_HOOK(SceCtrl_ksceCtrlPeekBufferPositive, KERNEL_PID,
-		"SceCtrl", TAI_ANY_LIBRARY, 0xEA1D3A34);
 
 	BIND_FUNC_EXPORT_HOOK(SceCtrl_sceCtrlPeekBufferPositive2, KERNEL_PID,
 		"SceCtrl", TAI_ANY_LIBRARY, 0x15F81E8C);
@@ -543,14 +577,10 @@ int module_start(SceSize argc, const void *args)
 	BIND_FUNC_EXPORT_HOOK(SceCtrl_sceCtrlPeekBufferPositiveExt2, KERNEL_PID,
 		"SceCtrl", TAI_ANY_LIBRARY, 0x860BF292);
 
-	BIND_FUNC_EXPORT_HOOK(SceCtrl_ksceCtrlReadBufferNegative, KERNEL_PID,
-		"SceCtrl", TAI_ANY_LIBRARY, 0x8D4E0DD1);
 
 	BIND_FUNC_EXPORT_HOOK(SceCtrl_sceCtrlReadBufferNegative2, KERNEL_PID,
 		"SceCtrl", TAI_ANY_LIBRARY, 0x27A0C5FB);
 
-	BIND_FUNC_EXPORT_HOOK(SceCtrl_ksceCtrlReadBufferPositive, KERNEL_PID,
-		"SceCtrl", TAI_ANY_LIBRARY, 0x9B96A1AA);
 
 	BIND_FUNC_EXPORT_HOOK(SceCtrl_sceCtrlReadBufferPositive2, KERNEL_PID,
 		"SceCtrl", TAI_ANY_LIBRARY, 0xC4226A3E);
@@ -605,18 +635,29 @@ int module_stop(SceSize argc, const void *args)
 
 	UNBIND_FUNC_HOOK(SceBt_sub_22999C8);
 
-	UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlPeekBufferNegative);
 	UNBIND_FUNC_HOOK(SceCtrl_sceCtrlPeekBufferNegative2);
-	UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlPeekBufferPositive);
 	UNBIND_FUNC_HOOK(SceCtrl_sceCtrlPeekBufferPositive2);
 	UNBIND_FUNC_HOOK(SceCtrl_sceCtrlPeekBufferPositiveExt);
 	UNBIND_FUNC_HOOK(SceCtrl_sceCtrlPeekBufferPositiveExt2);
-	UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlReadBufferNegative);
 	UNBIND_FUNC_HOOK(SceCtrl_sceCtrlReadBufferNegative2);
-	UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlReadBufferPositive);
 	UNBIND_FUNC_HOOK(SceCtrl_sceCtrlReadBufferPositive2);
 	UNBIND_FUNC_HOOK(SceCtrl_sceCtrlReadBufferPositiveExt);
 	UNBIND_FUNC_HOOK(SceCtrl_sceCtrlReadBufferPositiveExt2);
+
+	UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlPeekBufferPositive);
+    UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlReadBufferPositive);
+    UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlPeekBufferNegative);
+    UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlReadBufferNegative);
+
+	UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlPeekBufferPositiveExt);
+    UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlReadBufferPositiveExt);
+
+    UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlPeekBufferPositive2);
+    UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlReadBufferPositive2);
+    UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlPeekBufferNegative2);
+    UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlReadBufferNegative2);
+    UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlPeekBufferPositiveExt2);
+    UNBIND_FUNC_HOOK(SceCtrl_ksceCtrlReadBufferPositiveExt2);
 
 	return SCE_KERNEL_STOP_SUCCESS;
 }
