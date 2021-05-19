@@ -1,4 +1,4 @@
-bluetooth:
+X1Vita:
   attributes: 0
   version:
     major: 1
@@ -6,3 +6,9 @@ bluetooth:
   main:
     start: module_start
     stop: module_stop
+  modules:
+    X1VitaDebug:
+      syscall: true
+      functions:
+        - GetPidVid
+        - GetBuff

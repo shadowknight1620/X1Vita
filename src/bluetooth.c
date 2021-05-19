@@ -25,6 +25,7 @@ static int controller_connected = 0;
 static unsigned int controller_mac0 = 0;
 static unsigned int controller_mac1 = 0;
 
+static int lastPID = -1, lastVID = -1;
 
 static char current_recieved_input[0x12];
 
@@ -41,6 +42,8 @@ static inline void controller_input_reset(void)
 static int is_controller(const unsigned short vid_pid[2])
 {
 	ksceDebugPrintf("Got VID 0x%x        got PID 0x%x         ", vid_pid[0], vid_pid[1]);
+	lastVID = vid_pid[0];
+	lastPID = vid_pid[1];
 	//return (vid_pid[0] == controller_VID) &&
 	//	((vid_pid[1] == controller_PID) || (vid_pid[1] == controller_2_PID));
 	return (vid_pid[0] == MICROSOFT_VID) &&
@@ -56,6 +59,22 @@ static inline void mempool_free(void *ptr)
 {
 	ksceKernelFreeHeapMemory(bt_mempool_uid, ptr);
 }
+
+//Get PID and VID of last request
+static int GetPidVid(int *vid, int *pid)
+{
+	int ret;
+	ret = ksceKernelMemcpyKernelToUser((uintptr_t)vid, &lastVID, sizeof(lastVID));
+	if (ret < 0) return ret;
+	return ksceKernelMemcpyKernelToUser((uintptr_t)pid, &lastPID, sizeof(lastPID));
+}
+
+//Get current data recieved from the connected bluetooth device
+static int GetBuff(const char* buff)
+{
+	//We use memcpy instead of strncpy so it copies the whole thing if not values will be cut off.
+	return ksceKernelMemcpyKernelToUser((uintptr_t)buff, current_recieved_input, 0x12);
+} 
 
 static int controller_send_report(unsigned int mac0, unsigned int mac1, uint8_t flags, uint8_t report, size_t len, const void *data)
 {
@@ -181,11 +200,6 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 			if (hid_event.mac0 != controller_mac0 || hid_event.mac1 != controller_mac1)
 				continue;
 		}
-
-		ksceDebugPrintf("->Event:");
-		for (int i = 0; i < 0x15; i++)
-			ksceDebugPrintf(" %02X", recv_buff[i]);
-		ksceDebugPrintf("\n");
 
 		switch (hid_event.id) {
 		case 0x15: //Bluetooth turned on or off
@@ -444,8 +458,10 @@ static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 		if(triggers) buttons |= SCE_CTRL_RTRIGGER;
 		else buttons |= SCE_CTRL_R1;
 	}
-	pad_data->lt = current_recieved_input[9];
-	pad_data->rt = current_recieved_input[11];
+	int lt = ((current_recieved_input[9] + (255 * current_recieved_input[10])) / 4);
+	int rt = ((current_recieved_input[11] + (255 * current_recieved_input[12])) / 4);
+	pad_data->lt = lt;
+	pad_data->rt = rt;
 	//Joysticks
 	pad_data->ry = rightY;
 	pad_data->rx = rightX;
