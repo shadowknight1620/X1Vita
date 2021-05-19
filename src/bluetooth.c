@@ -399,13 +399,20 @@ static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 				}
 		}
 
-		//Select
+		//Start
 		//if(current_recieved_input[15] == 0x8) buttons |= SCE_CTRL_START;
+		//Select
 		if(current_recieved_input[16] == 0x1) buttons |= SCE_CTRL_SELECT;
 
-		//R3 L3 Start
+		//R3 L3 Start and Xbox button on some controllers
 		switch (current_recieved_input[15])
 		{
+			case 0x10:
+			{
+				buttons |= SCE_CTRL_PSBUTTON;
+				ksceCtrlSetButtonEmulation(0, 0, 0, SCE_CTRL_PSBUTTON, 8);
+				break;
+			}
 			case 0x8:
 				buttons |= SCE_CTRL_START;
 				break;
@@ -427,6 +434,11 @@ static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 				if(current_recieved_input[15] & 0x20) 
 				{
 					buttons |= SCE_CTRL_L3;
+				}
+				if(current_recieved_input[15] & 0x10)
+				{
+					buttons |= SCE_CTRL_PSBUTTON;
+					ksceCtrlSetButtonEmulation(0, 0, 0, SCE_CTRL_PSBUTTON, 8);
 				}
 				break;
 		}
