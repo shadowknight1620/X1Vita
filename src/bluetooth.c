@@ -21,7 +21,6 @@ static SceUID bt_thread_uid = -1;
 static SceUID bt_cb_uid = -1;
 static int bt_thread_run = 1;
 
-static int controller_was_connected = 0;
 static int controller_connected = 0;
 static unsigned int controller_mac0 = 0;
 static unsigned int controller_mac1 = 0;
@@ -194,18 +193,6 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 			break;
 		}
 
-		if(!controller_connected)
-		{
-			if(hid_event.id == 0x15)
-			{
-				ksceDebugPrintf("Got event 0x15\n");
-				if(controller_was_connected) //Reconnect
-				{
-					
-					controller_was_connected = 0;
-				}
-			}
-		}
 		/*
 		 * If we get an event with a MAC, and the MAC is different
 		 * from the connected controller, skip the event.
@@ -217,14 +204,6 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 		ksceDebugPrintf("Event id 0x%X\n", hid_event.id);
 		switch (hid_event.id) 
 		{
-			case 0x15: //Called when bluetooth is disabled or enabled
-			{
-				if(controller_connected)
-					controller_was_connected = 1;
-				controller_connected = 0;
-				ksceBtStartDisconnect(controller_mac0, controller_mac1);
-				break;
-			}
 			case 0x01: { /* Inquiry result event */
 				unsigned short vid_pid[2];
 				ksceBtGetVidPid(hid_event.mac0, hid_event.mac1, vid_pid);
