@@ -12,8 +12,8 @@
 #define MICROSOFT_VID 0x45E
 #define XBOX_CONTROLLER_PID 0x2FD
 
-#define controller_ANALOG_THRESHOLD 3
-
+#define CONTROLLER_ANALOG_THRESHOLD 4
+#define DEADZONE_ANALOG(a) ((a) > 127 - CONTROLLER_ANALOG_THRESHOLD && (a) < 127 + CONTROLLER_ANALOG_THRESHOLD ? 127 : (a))
 #define abs(x) (((x) < 0) ? -(x) : (x))
 
 static SceUID bt_mempool_uid = -1;
@@ -304,6 +304,7 @@ static int controllervita_bt_thread(SceSize args, void *argp)
 
 static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 {
+	if(!controller_connected) return;
 	int leftX = 0x80;
 	int leftY = 0x80;
 	int rightX = 0x80;
@@ -445,14 +446,14 @@ static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 
 		//Joysticks
 		//Left Joystick X
-		leftX = (current_recieved_input[2]);
+		leftX = DEADZONE_ANALOG((current_recieved_input[2]));
 		//Left Joystick Y
-		leftY = (current_recieved_input[4]);
+		leftY = DEADZONE_ANALOG((current_recieved_input[4]));
 
 		//Right Joystick X
-		rightX = (current_recieved_input[6]);
+		rightX = DEADZONE_ANALOG((current_recieved_input[6]));
 		//Right Joystick Y
-		rightY = (current_recieved_input[8]);
+		rightY = DEADZONE_ANALOG((current_recieved_input[8]));
 
 		if(leftX != 128 && leftY != 128)
 			joyStickMoved = 1;
@@ -475,10 +476,13 @@ static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 	pad_data->lt = lt;
 	pad_data->rt = rt;
 	//Joysticks
-	pad_data->ry = rightY;
-	pad_data->rx = rightX;
-	pad_data->lx = leftX;
-	pad_data->ly = leftY;
+	if(joyStickMoved)
+	{	
+		pad_data->ry = rightY;
+		pad_data->rx = rightX;
+		pad_data->lx = leftX;
+		pad_data->ly = leftY;
+	}
 	
 	pad_data->buttons |= buttons;
 	if(buttons != 0 || joyStickMoved) ksceKernelPowerTick(0);
