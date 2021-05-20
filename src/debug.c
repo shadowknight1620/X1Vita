@@ -8,11 +8,24 @@
 
 extern int GetPidVid(int *vid, int *pid);
 extern int GetBuff(const char* buff);
+extern SceUID _vshKernelSearchModuleByName(const char *name, SceUInt64 *unk);
 
 vita2d_pgf *pgf;
 
 void drawBuff()
 {   
+    SceUInt64 searchBuff = 0;
+    int moduleID = _vshKernelSearchModuleByName("X1Vita", &searchBuff);
+    sceClibPrintf("ModuleID is %x\n", moduleID);
+    if(moduleID < 0)
+    {
+        vita2d_pgf_draw_text(pgf, (960/2) - 100, (544/2)-10, RGBA8(0,255,0,255), 1.0f, "Error X1Vita not found!");
+        return;
+    }
+    else
+    {
+        vita2d_pgf_draw_text(pgf, 960 - 150, 20, RGBA8(0,255,0,255), 1.0f, "X1Vita Found!");
+    }
     char buff[0x12];
     GetBuff(buff);
 

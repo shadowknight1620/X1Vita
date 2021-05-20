@@ -21,6 +21,7 @@ static SceUID bt_thread_uid = -1;
 static SceUID bt_cb_uid = -1;
 static int bt_thread_run = 1;
 
+static int controller_was_connected = 0;
 static int controller_connected = 0;
 static unsigned int controller_mac0 = 0;
 static unsigned int controller_mac1 = 0;
@@ -176,7 +177,7 @@ DECL_FUNC_HOOK(SceBt_sub_22999C8, void *dev_base_ptr, int r1)
 
 static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common)
 {
-
+	ksceDebugPrintf("Got call back!\n");
 	static SceBtHidRequest hid_request;
 	static unsigned char recv_buff[0x100];
 	while (1) {
@@ -192,6 +193,19 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 		if (ret <= 0) {
 			break;
 		}
+
+		if(!controller_connected)
+		{
+			if(hid_event.id == 0x15)
+			{
+				ksceDebugPrintf("Got event 0x15\n");
+				if(controller_was_connected) //Reconnect
+				{
+					
+					controller_was_connected = 0;
+				}
+			}
+		}
 		/*
 		 * If we get an event with a MAC, and the MAC is different
 		 * from the connected controller, skip the event.
@@ -200,78 +214,83 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 			if (hid_event.mac0 != controller_mac0 || hid_event.mac1 != controller_mac1)
 				continue;
 		}
-
-		switch (hid_event.id) {
-		case 0x15: //Bluetooth turned on or off
+		ksceDebugPrintf("Event id 0x%X\n", hid_event.id);
+		switch (hid_event.id) 
 		{
-			controller_connected = 0;
-			reset_input_emulation();
-		}
-		case 0x01: { /* Inquiry result event */
-			unsigned short vid_pid[2];
-			ksceBtGetVidPid(hid_event.mac0, hid_event.mac1, vid_pid);
-
-			if (is_controller(vid_pid)) {
-				ksceBtStopInquiry();
-				controller_mac0 = hid_event.mac0;
-				controller_mac1 = hid_event.mac1;
+			case 0x15: //Called when bluetooth is disabled or enabled
+			{
+				if(controller_connected)
+					controller_was_connected = 1;
+				controller_connected = 0;
+				ksceBtStartDisconnect(controller_mac0, controller_mac1);
+				break;
 			}
-			break;
-		}
+			case 0x01: { /* Inquiry result event */
+				unsigned short vid_pid[2];
+				ksceBtGetVidPid(hid_event.mac0, hid_event.mac1, vid_pid);
 
-		case 0x02: /* Inquiry stop event */
-			if (!controller_connected) {
-				if (controller_mac0 || controller_mac1)
-					ksceBtStartConnect(controller_mac0, controller_mac1);
+				if (is_controller(vid_pid)) {
+					ksceBtStopInquiry();
+					controller_mac0 = hid_event.mac0;
+					controller_mac1 = hid_event.mac1;
+				}
+				break;
 			}
-			break;
 
-		case 0x04: /* Link key request? event */
-			ksceBtReplyUserConfirmation(hid_event.mac0, hid_event.mac1, 1);
-			break;
+			case 0x02: /* Inquiry stop event */
+				if (!controller_connected) {
+					if (controller_mac0 || controller_mac1)
+						ksceBtStartConnect(controller_mac0, controller_mac1);
+				}
+				break;
 
-		case 0x05: { /* Connection accepted event */
-			unsigned short vid_pid[2];
-			ksceBtGetVidPid(hid_event.mac0, hid_event.mac1, vid_pid);
 
-			if (is_controller(vid_pid)) {
+			case 0x04: /* Link key request? event */
+				ksceBtReplyUserConfirmation(hid_event.mac0, hid_event.mac1, 1);
+				break;
 
-				controller_input_reset();
-				controller_mac0 = hid_event.mac0;
-				controller_mac1 = hid_event.mac1;
-				controller_connected = 1;
-				controller_send_0x11_report(hid_event.mac0, hid_event.mac1);
+			case 0x05: { /* Connection accepted event */
+				unsigned short vid_pid[2];
+				ksceBtGetVidPid(hid_event.mac0, hid_event.mac1, vid_pid);
+
+				if (is_controller(vid_pid)) {
+
+					controller_input_reset();
+					controller_mac0 = hid_event.mac0;
+					controller_mac1 = hid_event.mac1;
+					controller_connected = 1;
+					controller_send_0x11_report(hid_event.mac0, hid_event.mac1);
+				}
+				break;
 			}
-			break;
-		}
 
 
-		case 0x06: /* Device disconnect event*/
-			controller_connected = 0;
-			reset_input_emulation();
-			break;
+			case 0x06: /* Device disconnect event*/
+				controller_connected = 0;
+				reset_input_emulation();
+				break;
 
-		case 0x08: /* Connection requested event */
-			/*
-			 * Do nothing since we will get a 0x05 event afterwards.
-			 */
-			break;
+			case 0x08: /* Connection requested event */
+				/*
+				* Do nothing since we will get a 0x05 event afterwards.
+				*/
+				break;
 
-		case 0x09: /* Connection request without being paired? event */
-			/*
-			 * The Vita needs to have a pairing with the controller,
-			 * otherwise it won't connect.
-			 */
-			break;
+			case 0x09: /* Connection request without being paired? event */
+				/*
+				* The Vita needs to have a pairing with the controller,
+				* otherwise it won't connect.
+				*/
+				break;
 
-		case 0x0A:
-			memcpy(current_recieved_input, recv_buff, 0x11);
-			enqueue_read_request(hid_event.mac0, hid_event.mac1, &hid_request, recv_buff, sizeof(recv_buff));
-			break;
+			case 0x0A:
+				memcpy(current_recieved_input, recv_buff, 0x11);
+				enqueue_read_request(hid_event.mac0, hid_event.mac1, &hid_request, recv_buff, sizeof(recv_buff));
+				break;
 
-		case 0x0B:
-			enqueue_read_request(hid_event.mac0, hid_event.mac1, &hid_request, recv_buff, sizeof(recv_buff));
-			break;
+			case 0x0B:
+				enqueue_read_request(hid_event.mac0, hid_event.mac1, &hid_request, recv_buff, sizeof(recv_buff));
+				break;
 		}
 	}
 
