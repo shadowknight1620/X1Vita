@@ -70,7 +70,7 @@ target_link_libraries(debugger
   SceAppMgr_stub
 )
 
-vita_create_vpk("debugger.vpk" "DEBG00001" "debugger.self"
+vita_create_vpk("X1VitaCompanion.vpk" "DEBG00001" "debugger.self"
   VERSION "01.00"
-  NAME "X1Vita Debugger"
+  NAME "X1Vita Companion"
 )
