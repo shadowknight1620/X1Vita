@@ -16,6 +16,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions")
 
 add_executable(${PROJECT_NAME}
   src/bluetooth.c
+  src/common.h
 )
 
 set_target_properties(${PROJECT_NAME}
@@ -42,6 +43,7 @@ vita_create_stubs(stubs ${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.yml 
 
 add_executable(debugger
   src/debug.c
+  src/common.h
 )
 
 target_link_libraries(debugger
