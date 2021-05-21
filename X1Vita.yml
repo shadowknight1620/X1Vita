@@ -12,3 +12,5 @@ X1Vita:
       functions:
         - GetPidVid
         - GetBuff
+        - SetSwapStatus
+        - GetSwapStatus

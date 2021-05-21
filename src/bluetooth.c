@@ -4,10 +4,12 @@
 #include <psp2kern/kernel/suspend.h>
 #include <psp2kern/bt.h>
 #include <psp2kern/ctrl.h>
+#include <psp2kern/io/fcntl.h>
 #include <psp2/touch.h>
 #include <string.h>
 #include <psp2/motion.h>
 #include <taihen.h>
+#include "common.h"
 
 #define MICROSOFT_VID 0x45E
 #define XBOX_CONTROLLER_PID 0x2FD
@@ -21,6 +23,7 @@ static SceUID bt_thread_uid = -1;
 static SceUID bt_cb_uid = -1;
 static int bt_thread_run = 1;
 
+static int lt_rt_swap = 0;
 static int controller_connected = 0;
 static unsigned int controller_mac0 = 0;
 static unsigned int controller_mac1 = 0;
@@ -34,6 +37,28 @@ static char current_recieved_input[0x12];
 	static SceUID name##_hook_uid = -1; \
 	static int name##_hook_func(__VA_ARGS__)
 
+int checkFileExist(const char *file)
+{
+	int fd = ksceIoOpen(file, SCE_O_RDONLY, 0);
+	if(fd < 0) return 0;
+	ksceIoClose(fd);
+	return 1;
+}
+
+int checkDirExist(const char *file)
+{
+	int fd = ksceIoDopen(file);
+	if(fd < 0) return 0;
+	ksceIoDclose(fd);
+	return 1;
+}
+
+void createFile(const char *file)
+{
+	int fd = ksceIoOpen(file, SCE_O_WRONLY | SCE_O_CREAT, 0777);
+	ksceIoClose(fd);
+}
+
 static inline void controller_input_reset(void)
 {
 	memset(&current_recieved_input, 0, sizeof(current_recieved_input));
@@ -41,7 +66,6 @@ static inline void controller_input_reset(void)
 
 static int is_controller(const unsigned short vid_pid[2])
 {
-	ksceDebugPrintf("Got VID 0x%x        got PID 0x%x         ", vid_pid[0], vid_pid[1]);
 	lastVID = vid_pid[0];
 	lastPID = vid_pid[1];
 	//return (vid_pid[0] == controller_VID) &&
@@ -59,9 +83,42 @@ static inline void mempool_free(void *ptr)
 {
 	ksceKernelFreeHeapMemory(bt_mempool_uid, ptr);
 }
+//Exports
+
+//Get weather the triggers or bumpers are swaped (bool)
+int GetSwapStatus()
+{
+	return lt_rt_swap;
+}
+
+//Set weather the triggers or bumpers are swaped (bool). Returns 0 if success < 0 on error.
+int SetSwapStatus(int *status)
+{
+	int setRes = ksceKernelMemcpyUserToKernel(&lt_rt_swap, (uintptr_t)status, sizeof(int));
+	if(setRes < 0) return setRes;
+	if(!lt_rt_swap)
+	{	
+		if(checkFileExist(ConfigPath))
+		{
+			ksceIoRemove(ConfigPath);
+			return 0;
+		}
+	}
+	if(lt_rt_swap)
+	{
+		if(!checkFileExist(ConfigPath))
+		{
+			if(!checkDirExist("ux0:data/X1Vita"))
+				ksceIoMkdir("ux0:data/X1Vita", SCE_S_IWUSR | SCE_S_IRUSR);
+			createFile(ConfigPath);	
+			return 0;
+		}
+	}
+	return 0;
+}
 
 //Get PID and VID of last request
-static int GetPidVid(int *vid, int *pid)
+int GetPidVid(int *vid, int *pid)
 {
 	int ret;
 	ret = ksceKernelMemcpyKernelToUser((uintptr_t)vid, &lastVID, sizeof(lastVID));
@@ -70,7 +127,7 @@ static int GetPidVid(int *vid, int *pid)
 }
 
 //Get current data recieved from the connected bluetooth device
-static int GetBuff(const char* buff)
+int GetBuff(const char* buff)
 {
 	//We use memcpy instead of strncpy so it copies the whole thing if not values will be cut off.
 	return ksceKernelMemcpyKernelToUser((uintptr_t)buff, current_recieved_input, 0x12);
@@ -176,7 +233,6 @@ DECL_FUNC_HOOK(SceBt_sub_22999C8, void *dev_base_ptr, int r1)
 
 static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common)
 {
-	ksceDebugPrintf("Got call back!\n");
 	static SceBtHidRequest hid_request;
 	static unsigned char recv_buff[0x100];
 	while (1) {
@@ -201,9 +257,15 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 			if (hid_event.mac0 != controller_mac0 || hid_event.mac1 != controller_mac1)
 				continue;
 		}
-		ksceDebugPrintf("Event id 0x%X\n", hid_event.id);
 		switch (hid_event.id) 
 		{
+			case 0x15:
+			{
+				lastPID = 0;
+				lastVID = 0;
+				controller_connected = 0;
+				ksceBtStartDisconnect(controller_mac0, controller_mac1);
+			}
 			case 0x01: { /* Inquiry result event */
 				unsigned short vid_pid[2];
 				ksceBtGetVidPid(hid_event.mac0, hid_event.mac1, vid_pid);
@@ -309,6 +371,10 @@ static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 	int rightY = 0x80;
 	int joyStickMoved = 0;
 	unsigned int buttons = 0;
+
+	int lt = ((current_recieved_input[9] + (255 * current_recieved_input[10])) / 4);
+	int rt = ((current_recieved_input[11] + (255 * current_recieved_input[12])) / 4);
+
 	//Xbox button
 	if(current_recieved_input[0] & 0x02) 
 	{
@@ -320,6 +386,7 @@ static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 	} //Ant other button call
 	else if(current_recieved_input[0] & 0x1)
 	{
+		
 		//DPad
 		switch (current_recieved_input[13])
 		{
@@ -370,13 +437,27 @@ static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 				break;
 			case 0x80:
 				//RB
-				if(triggers) buttons |= SCE_CTRL_R1;
-				else buttons |= SCE_CTRL_RTRIGGER;
+				if(!lt_rt_swap)
+				{
+					if(triggers) buttons |= SCE_CTRL_R1;
+					else buttons |= SCE_CTRL_RTRIGGER;
+				}
+				else
+				{
+					pad_data->rt = 255;
+				}
 				break;
 			case 0x40:
 				//LB
-				if(triggers) buttons |= SCE_CTRL_L1;
-				else buttons |= SCE_CTRL_LTRIGGER;
+				if(!lt_rt_swap)
+				{
+					if(triggers) buttons |= SCE_CTRL_L1;
+					else buttons |= SCE_CTRL_LTRIGGER;
+				}
+				else
+				{
+					pad_data->lt = 255;
+				}
 				break;
 			default:
 				{
@@ -386,13 +467,27 @@ static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 					if(current_recieved_input[14] & 0x10) buttons |= SCE_CTRL_TRIANGLE;		
 					if(current_recieved_input[14] & 0x80)
 					{
-						if(triggers) buttons |= SCE_CTRL_R1;
-						else buttons |= SCE_CTRL_RTRIGGER;
+						if(!lt_rt_swap)
+						{
+							if(triggers) buttons |= SCE_CTRL_R1;
+							else buttons |= SCE_CTRL_RTRIGGER;
+						}
+						else
+						{
+							pad_data->rt = 255;
+						}
 					}
 					if(current_recieved_input[14] & 0x40) 
 					{
-						if(triggers) buttons |= SCE_CTRL_L1;
-						else buttons |= SCE_CTRL_LTRIGGER;
+						if(!lt_rt_swap)
+						{
+							if(triggers) buttons |= SCE_CTRL_L1;
+							else buttons |= SCE_CTRL_LTRIGGER;
+						}
+						else
+						{
+							pad_data->lt = 255;
+						}
 					}
 					break;
 				}
@@ -459,20 +554,39 @@ static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 	}
 
 	//LT RT
-	if(current_recieved_input[9] > 10)
+	if(lt > 10)
 	{
-		if(triggers) buttons |= SCE_CTRL_LTRIGGER;
-		else buttons |= SCE_CTRL_L1;
+		if(!lt_rt_swap)
+		{
+			// if triggers = true, ltrigger = L2 & L1 = L1. Else Ltigger = L1 and LTRIGGER = L2
+			if(triggers) buttons |= SCE_CTRL_LTRIGGER;
+			else buttons |= SCE_CTRL_L1;
+		}
+		else
+		{
+			if(triggers) buttons |= SCE_CTRL_L1;
+			else buttons |= SCE_CTRL_LTRIGGER;
+		}
 	}
-	if(current_recieved_input[11] > 10)
+	if(rt > 10)
 	{
-		if(triggers) buttons |= SCE_CTRL_RTRIGGER;
-		else buttons |= SCE_CTRL_R1;
+		if(!lt_rt_swap)
+		{
+			if(triggers) buttons |= SCE_CTRL_RTRIGGER;
+			else buttons |= SCE_CTRL_R1;
+		}
+		else
+		{
+			if(triggers) buttons |= SCE_CTRL_R1;
+			else buttons |= SCE_CTRL_RTRIGGER;
+		}
 	}
-	int lt = ((current_recieved_input[9] + (255 * current_recieved_input[10])) / 4);
-	int rt = ((current_recieved_input[11] + (255 * current_recieved_input[12])) / 4);
-	pad_data->lt = lt;
-	pad_data->rt = rt;
+
+	if(!lt_rt_swap)
+	{
+		pad_data->lt = lt;
+		pad_data->rt = rt;
+	}
 	//Joysticks
 	if(joyStickMoved)
 	{	
@@ -635,6 +749,7 @@ int module_start(SceSize argc, const void *args)
 		0x3C, 0x1000, 0, 0x10000, 0);
 	ksceKernelStartThread(bt_thread_uid, 0, NULL);
 
+	lt_rt_swap = checkFileExist(ConfigPath);
 
 	return SCE_KERNEL_START_SUCCESS;
 
