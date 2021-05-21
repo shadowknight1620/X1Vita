@@ -37,40 +37,41 @@ target_link_libraries(${PROJECT_NAME}
   SceKernelSuspendForDriver_stub
   SceCtrlForDriver_stub
 )
-vita_create_self(debugger.self debugger UNSAFE)
 vita_create_self(${PROJECT_NAME}.skprx ${PROJECT_NAME} CONFIG ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.yml UNSAFE)
 vita_create_stubs(stubs ${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.yml KERNEL)
 
 add_executable(debugger
-  src/debug.c
-  src/common.h
+src/debug.c
+src/common.h
 )
 
 target_link_libraries(debugger
-  SceLibKernel_stub
-  taihen_stub
-  SceVshBridge_stub
-  SceThreadmgrForDriver_stub
-  SceShellSvc_stub 
-  ${CMAKE_SOURCE_DIR}/build/Debug/stubs/libX1Vita_stub_weak.a
-  vita2d 
-  SceDisplay_stub 
-  SceGxm_stub
-	SceSysmodule_stub 
-  SceCtrl_stub 
-  ScePgf_stub 
-  ScePvf_stub
-	SceCommonDialog_stub 
-  freetype 
-  png 
-  jpeg 
-  z 
-  m 
-  c 
-  SceAppMgr_stub
+SceLibKernel_stub
+taihen_stub
+SceVshBridge_stub
+SceThreadmgrForDriver_stub
+SceShellSvc_stub 
+${CMAKE_SOURCE_DIR}/build/Debug/stubs/libX1Vita_stub_weak.a
+vita2d 
+SceDisplay_stub 
+SceGxm_stub
+SceSysmodule_stub 
+SceCtrl_stub 
+ScePgf_stub 
+ScePvf_stub
+SceCommonDialog_stub 
+freetype 
+png 
+jpeg 
+z 
+m 
+c 
+SceAppMgr_stub
 )
 
+vita_create_self(debugger.self debugger UNSAFE)
+
 vita_create_vpk("X1VitaCompanion.vpk" "DEBG00001" "debugger.self"
-  VERSION "01.00"
-  NAME "X1Vita Companion"
+VERSION "01.00"
+NAME "X1Vita Companion"
 )

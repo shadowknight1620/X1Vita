@@ -112,6 +112,8 @@ void PrintSelection(int selection)
         else vita2d_pgf_draw_text(pgf, 0, printY, TextColour, 1.0f, Selections[i]);
         printY += StartY;
     }
+    printY += StartY + 10;
+    vita2d_pgf_draw_text(pgf, 0, printY, TextColour, 1.0f, "If you have any issues you can contact me via discord: M Ibrahim#0197");
 }
 
 void SelectScreen()
