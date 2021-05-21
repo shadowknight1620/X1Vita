@@ -68,8 +68,6 @@ static int is_controller(const unsigned short vid_pid[2])
 {
 	lastVID = vid_pid[0];
 	lastPID = vid_pid[1];
-	//return (vid_pid[0] == controller_VID) &&
-	//	((vid_pid[1] == controller_PID) || (vid_pid[1] == controller_2_PID));
 	return (vid_pid[0] == MICROSOFT_VID) &&
 		(vid_pid[1] == XBOX_CONTROLLER_PID);
 }
