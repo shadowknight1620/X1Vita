@@ -36,7 +36,6 @@ void drawBuff()
         vita2d_pgf_draw_text(pgf, currentX, 20, RGBA8(0,255,0,255), 1.0f, outBuff);
         currentX += 40;
     }
-    strcpy(outBuff, "\n"); //dunno if we need this
     vita2d_pgf_draw_text(pgf, currentX, 20, RGBA8(0,255,0,255), 1.0f, outBuff);
 
     int pid;
@@ -90,7 +89,7 @@ int main()
         drawBuff();
         vita2d_end_drawing();
         vita2d_swap_buffers();
-    } while (((buttons.buttons & SCE_CTRL_START) && (buttons.buttons & SCE_CTRL_SELECT) & (buttons.buttons & SCE_CTRL_PSBUTTON)) == 0);
+    } while (((buttons.buttons & SCE_CTRL_START) && (buttons.buttons & SCE_CTRL_SELECT) && (buttons.buttons & SCE_CTRL_LTRIGGER) && (buttons.buttons & SCE_CTRL_RTRIGGER)) == 0);
 
     vita2d_fini();
     vita2d_free_pgf(pgf);

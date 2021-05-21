@@ -188,13 +188,6 @@ static int controller_send_0x11_report(unsigned int mac0, unsigned int mac1)
 	return 0;
 }
 
-static void reset_input_emulation()
-{
-	ksceCtrlSetButtonEmulation(0, 0, 0, 0, 32);
-	ksceCtrlSetAnalogEmulation(0, 0, 0x80, 0x80, 0x80, 0x80,
-		0x80, 0x80, 0x80, 0x80, 0);
-}
-
 static void enqueue_read_request(unsigned int mac0, unsigned int mac1, SceBtHidRequest *request, unsigned char *buffer, unsigned int length)
 {
 	memset(request, 0, sizeof(*request));
@@ -233,6 +226,7 @@ DECL_FUNC_HOOK(SceBt_sub_22999C8, void *dev_base_ptr, int r1)
 
 static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common)
 {
+
 	static SceBtHidRequest hid_request;
 	static unsigned char recv_buff[0x100];
 	while (1) {
@@ -248,7 +242,6 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 		if (ret <= 0) {
 			break;
 		}
-
 		/*
 		 * If we get an event with a MAC, and the MAC is different
 		 * from the connected controller, skip the event.
@@ -257,14 +250,12 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 			if (hid_event.mac0 != controller_mac0 || hid_event.mac1 != controller_mac1)
 				continue;
 		}
+
 		switch (hid_event.id) 
 		{
-			case 0x15:
+			case 0x15: //Bluetooth turned on or off
 			{
-				lastPID = 0;
-				lastVID = 0;
 				controller_connected = 0;
-				ksceBtStartDisconnect(controller_mac0, controller_mac1);
 			}
 			case 0x01: { /* Inquiry result event */
 				unsigned short vid_pid[2];
@@ -284,7 +275,6 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 						ksceBtStartConnect(controller_mac0, controller_mac1);
 				}
 				break;
-
 
 			case 0x04: /* Link key request? event */
 				ksceBtReplyUserConfirmation(hid_event.mac0, hid_event.mac1, 1);
@@ -308,7 +298,6 @@ static int bt_cb_func(int notifyId, int notifyCount, int notifyArg, void *common
 
 			case 0x06: /* Device disconnect event*/
 				controller_connected = 0;
-				reset_input_emulation();
 				break;
 
 			case 0x08: /* Connection requested event */
@@ -351,7 +340,6 @@ static int controllervita_bt_thread(SceSize args, void *argp)
 
 	if (controller_connected) {
 		ksceBtStartDisconnect(controller_mac0, controller_mac1);
-		reset_input_emulation();
 	}
 
 	ksceBtUnregisterCallback(bt_cb_uid);
