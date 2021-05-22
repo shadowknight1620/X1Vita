@@ -369,7 +369,7 @@ static void patch_ctrl_data(SceCtrlData *pad_data, int triggers)
 			buttons |= SCE_CTRL_PSBUTTON;
 			ksceCtrlSetButtonEmulation(0, 0, 0, SCE_CTRL_PSBUTTON, 8);
 		}
-	} //Ant other button call
+	} //Any other button call
 	else if(current_recieved_input[0] & 0x1)
 	{
 		
