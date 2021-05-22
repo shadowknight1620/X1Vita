@@ -12,6 +12,7 @@
 
 void DebugScreen();
 void TriggerSwap();
+void WarningSreen();
 void SelectScreen();
 extern SceUID _vshKernelSearchModuleByName(const char *name, SceUInt64 *unk);
 
@@ -116,6 +117,19 @@ void PrintSelection(int selection)
     vita2d_pgf_draw_text(pgf, 0, printY, TextColour, 1.0f, "If you have any issues you can contact me via discord: M Ibrahim#0197");
 }
 
+void WarningScreen()
+{
+    sceShellUtilUnlock(SCE_SHELL_UTIL_LOCK_TYPE_PS_BTN_2);
+    while (1)
+    {
+        vita2d_start_drawing();
+        vita2d_clear_screen();
+        vita2d_pgf_draw_text(pgf, (960/2) - 100, (544/2)-10, RGBA8(0,255,0,255), 1.0f, "Error X1Vita not found!");
+        vita2d_end_drawing();
+        vita2d_swap_buffers();
+    }
+}
+
 void SelectScreen()
 {
     SceCtrlData pad;
@@ -167,10 +181,11 @@ int main()
     
     pgf = vita2d_load_default_pgf();
 
-    SelectScreen();
+    if(!moduleLoaded) WarningScreen();
+    else SelectScreen();
 
     vita2d_fini();
     vita2d_free_pgf(pgf);
     sceShellUtilUnlock(SCE_SHELL_UTIL_LOCK_TYPE_PS_BTN_2);
-    sceKernelExitProcess(0);
+    return sceKernelExitProcess(0);
 }
