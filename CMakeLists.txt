@@ -40,7 +40,7 @@ target_link_libraries(${PROJECT_NAME}
   SceCtrlForDriver_stub
 )
 
-vita_create_self(${PROJECT_NAME}.self ${PROJECT_NAME} UNSAFE)
+vita_create_self(X1VitaCompanion.self ${PROJECT_NAME} UNSAFE)
 vita_create_self(${PROJECT_NAME}.skprx ${PROJECT_NAME} CONFIG ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.yml UNSAFE)
 vita_create_stubs(stubs ${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.yml KERNEL)
 
@@ -57,7 +57,7 @@ taihen_stub
 SceVshBridge_stub
 SceThreadmgrForDriver_stub
 SceShellSvc_stub
-X1Vita_stub_weak
+${CMAKE_SOURCE_DIR}/build/Debug/stubs/libX1Vita_stub_weak.a
 vita2d 
 SceDisplay_stub 
 SceGxm_stub
