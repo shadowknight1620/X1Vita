@@ -2,4 +2,6 @@
 int SetSwapStatus(int *status);
 int GetSwapStatus();
 int GetPidVid(int *vid, int *pid);
-int GetBuff(const char* buff);
+int GetBuff(int port, const char* buff);
+int GetPortBuff(const char *buff);
+#define CONTROLLER_COUNT 5

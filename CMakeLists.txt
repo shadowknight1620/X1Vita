@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.2.0)
 
 if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   if(DEFINED ENV{VITASDK})
@@ -8,7 +8,7 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   endif()
 endif()
 
-include("${VITASDK}/share/vita.cmake" REQUIRED)
+include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-q -Wall -Wno-unknown-pragmas -O3 -Wno-unused-function")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions")
@@ -17,7 +17,6 @@ project(X1Vita)
 
 add_executable(${PROJECT_NAME}
   src/bluetooth.c
-  src/common.h
 )
 
 
@@ -34,30 +33,34 @@ target_link_libraries(${PROJECT_NAME}
   SceSysmemForKernel_stub
   SceThreadmgrForDriver_stub
   SceIofilemgrForDriver_stub
+  taihenModuleUtils_stub
   SceBtForDriver_stub
   SceDebugForDriver_stub
   SceKernelSuspendForDriver_stub
+  SceModulemgrForKernel_stub 
   SceCtrlForDriver_stub
+  SceSblAIMgrForDriver_stub
+  SceSysrootForDriver_stub 
+  SceProcessmgrForDriver_stub
 )
 
-vita_create_self(X1VitaCompanion.self ${PROJECT_NAME} UNSAFE)
+vita_create_self(X1VitaCompanion.self X1VitaCompanion UNSAFE)
 vita_create_self(${PROJECT_NAME}.skprx ${PROJECT_NAME} CONFIG ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.yml UNSAFE)
 vita_create_stubs(stubs ${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.yml KERNEL)
 
-project(X1VitaCompanion)
 
-add_executable(${PROJECT_NAME}
+add_executable(X1VitaCompanion
     src/debug.c
     src/common.h
 )
 
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(X1VitaCompanion
 SceLibKernel_stub
 taihen_stub
 SceVshBridge_stub
+${CMAKE_SOURCE_DIR}/build/Debug/stubs/libX1Vita_stub_weak.a
 SceThreadmgrForDriver_stub
 SceShellSvc_stub
-${CMAKE_SOURCE_DIR}/build/Debug/stubs/libX1Vita_stub_weak.a
 vita2d 
 SceDisplay_stub 
 SceGxm_stub
@@ -75,7 +78,7 @@ c
 SceAppMgr_stub
 )
 
-vita_create_vpk("X1VitaCompanion.vpk" "DEBG00001" "${PROJECT_NAME}.self"
+vita_create_vpk("X1VitaCompanion.vpk" "DEBG00001" "X1VitaCompanion.self"
     VERSION "01.00"
     NAME "X1Vita Companion"
 )

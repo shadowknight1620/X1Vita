@@ -25,6 +25,7 @@ void (*functions[MaxSelections])(void) = { &DebugScreen, &TriggerSwap };
 
 void drawBuff()
 {   
+    int currentY = 20;
     if(!moduleLoaded)
     {
         vita2d_pgf_draw_text(pgf, (960/2) - 100, (544/2)-10, RGBA8(0,255,0,255), 1.0f, "Error X1Vita not found!");
@@ -32,11 +33,11 @@ void drawBuff()
     }
     else
     {
-        vita2d_pgf_draw_text(pgf, 960 - 150, 20, RGBA8(0,255,0,255), 1.0f, "X1Vita Found!");
+        vita2d_pgf_draw_text(pgf, 960 - 150, currentY, RGBA8(0,255,0,255), 1.0f, "X1Vita Found!");
     }
     int swapStatus = GetSwapStatus();
     char buff[0x12];
-    GetBuff(buff);
+    GetBuff(0, buff);
 
     char outBuff[0x400];
     memset(outBuff, 0, 0x400);
@@ -45,20 +46,34 @@ void drawBuff()
 	for (int i = 0; i < 0x12; i++)
     {
 		sprintf(outBuff, "%02X", buff[i]);
-        vita2d_pgf_draw_text(pgf, currentX, 20, RGBA8(0,255,0,255), 1.0f, outBuff);
+        vita2d_pgf_draw_text(pgf, currentX, currentY, RGBA8(0,255,0,255), 1.0f, outBuff);
         currentX += 40;
     }
-    vita2d_pgf_draw_text(pgf, currentX, 20, RGBA8(0,255,0,255), 1.0f, outBuff);
+    vita2d_pgf_draw_text(pgf, currentX, currentY, RGBA8(0,255,0,255), 1.0f, outBuff);
+    
+    currentY += 25;
+    currentX = 0;
 
+    GetPortBuff(buff);
+    for (int i = 0; i < CONTROLLER_COUNT; i++)
+    {
+        sprintf(outBuff, "%02X", buff[i]);
+        vita2d_pgf_draw_text(pgf, currentX, currentY, RGBA8(0,255,0,255), 1.0f, outBuff);
+        currentX += 40;
+    }
+    
+    currentY += 25;
     int pid;
     int vid;
     GetPidVid(&pid, &vid);
 
     sprintf(outBuff, "Last connection attempt had PID: 0x%X VID: 0x%X\n", pid, vid);
-    vita2d_pgf_draw_text(pgf, 0, 45, SelectColour, 1.0f,outBuff);
-    if(swapStatus) vita2d_pgf_draw_text(pgf, 0, 65, SelectColour, 1.0f, "Triggers and bumpers are swapped");
-    else vita2d_pgf_draw_text(pgf, 0, 65, SelectColour, 1.0f, "Triggers and bumpers are not swapped");
-    vita2d_pgf_draw_text(pgf, 0, 85, TextColour, 1.0f, "Hold Select + Start + L + R to exit");
+    vita2d_pgf_draw_text(pgf, 0, currentY, SelectColour, 1.0f,outBuff);
+    currentY += 25;
+    if(swapStatus) vita2d_pgf_draw_text(pgf, 0, currentY, SelectColour, 1.0f, "Triggers and bumpers are swapped");
+    else vita2d_pgf_draw_text(pgf, 0, currentY, SelectColour, 1.0f, "Triggers and bumpers are not swapped");
+    currentY += 25;
+    vita2d_pgf_draw_text(pgf, 0, currentY, TextColour, 1.0f, "Hold Select + Start + L + R to exit");
 }
 
 void TriggerSwap()
