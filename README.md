@@ -31,10 +31,10 @@ Based on ds4vita
 # FAQ
 1. My controller connects but doesn't do anything!  
 There can several reasons but here are the most common:  
-1. Your using a 3rd party controller. (see note below)
-2. Your using an official controller other than the Xbox One (For e.g. Xbox One Eliete, Eliete 2) (see note below)
-3. Your using the new Xbox one controllers, ie the ones with the screenshot button (including the series controllers) are **not** suppourted, this is simply because the vita's bluetooth version does not suppourt them so they simply cannot connect no matter what.
-4. You installed the plugin incorrectly (install and open the companion to see if X1Vita is detected)
+  1. Your using a 3rd party controller. (see note below)
+  2. Your using an official controller other than the Xbox One (For e.g. Xbox One Eliete, Eliete 2) (see note below)
+  3. Your using the new Xbox one controllers, ie the ones with the screenshot button (including the series controllers) are **not** suppourted, this is simply because the vita's      bluetooth version does not suppourt them so they simply cannot connect no matter what.
+  4. You installed the plugin incorrectly (install and open the companion to see if X1Vita is detected)
 
 ## Note about controllers not working
 For now only official Xbox One controllers are suppourted all others will be ignored. If you want your controller to be added install the companion open it and go to Debug Bluetooth then connect the controller and note down the PID or VID. Then send them to me somehow along with controller name. (My discord is in the companion)
