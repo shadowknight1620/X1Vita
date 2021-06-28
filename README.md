@@ -29,7 +29,7 @@ Made for the kyuhen homebrew contest.
 Based on ds4vita  
 
 # FAQ
-**1. My controller connects but doesn't do anything!  **
+**1. My controller connects but doesn't do anything!**  
 There can several reasons but here are the most common:  
   1. Your using a 3rd party controller. (see note below)
   2. Your using an official controller other than the Xbox One (For e.g. Xbox One Eliete, Eliete 2) (see note below)
