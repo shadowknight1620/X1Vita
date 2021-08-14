@@ -81,4 +81,5 @@ SceAppMgr_stub
 vita_create_vpk("X1VitaCompanion.vpk" "DEBG00001" "X1VitaCompanion.self"
     VERSION "01.00"
     NAME "X1Vita Companion"
+    FILE sce_sys sce_sys
 )
